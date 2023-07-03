@@ -198,7 +198,7 @@ class EmployeeController extends Controller
         Employee::find($id)->delete();
 
         return redirect()->route('employees.index');
-    }
+    
     public function downloadFile($employeeId)
     {
         $employee = Employee::find($employeeId);
