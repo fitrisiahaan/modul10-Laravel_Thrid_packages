@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RealRashid\SweetAlert\Facades\Alert;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\EmployeesExport;
+use PDF;
 
 class EmployeeController extends Controller
 {
@@ -19,13 +23,12 @@ class EmployeeController extends Controller
     {
         $pageTitle = 'Employee List';
 
-        // ELOQUENT
-        $employees = Employee::all();
 
-        return view('employee.index', [
-            'pageTitle' => $pageTitle,
-            'employees' => $employees,
-        ]);
+        $employees = Employee::all();
+        confirmDelete();
+
+
+        return view('employee.index', compact('pageTitle', 'employees'));
     }
 
     /**
@@ -47,6 +50,7 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
+
         // Mendefinisikan pesan kesalahan untuk validasi input
         $messages = [
             'required' => ':attribute harus diisi.',
@@ -97,9 +101,11 @@ class EmployeeController extends Controller
         }
 
         $employee->save();
+        Alert::success('Added Successfully', 'Employee Data Added Successfully.');
 
         return redirect()->route('employees.index');
     }
+
 
     /**
      * Display the specified resource.
@@ -186,6 +192,8 @@ class EmployeeController extends Controller
 
         $employee->save();
 
+
+    Alert::success('Changed Successfully', 'Employee Data Changed Successfully.');
         return redirect()->route('employees.index');
     }
 
@@ -197,8 +205,12 @@ class EmployeeController extends Controller
         // ELOQUENT
         Employee::find($id)->delete();
 
+
+        Alert::success('Deleted Successfully', 'Employee Data Deleted Successfully.');
+
         return redirect()->route('employees.index');
-    
+    }
+
     public function downloadFile($employeeId)
     {
         $employee = Employee::find($employeeId);
@@ -209,5 +221,34 @@ class EmployeeController extends Controller
             return Storage::download($encryptedFilename, $downloadFilename);
         }
     }
+
+    public function exportExcel()
+    {
+        return Excel::download(new EmployeesExport, 'employees.xlsx');
+    }
+
+    public function exportPdf()
+    {
+        $employees = Employee::all();
+
+        $pdf = PDF::loadView('employee.export_pdf', compact('employees'));
+
+        return $pdf->download('employees.pdf');
+    }
+
+
+    public function getData(Request $request)
+{
+    $employees = Employee::with('position');
+
+    if ($request->ajax()) {
+        return datatables()->of($employees)
+            ->addIndexColumn()
+            ->addColumn('actions', function($employee) {
+                return view('employee.actions', compact('employee'));
+            })
+            ->toJson();
+    }
+}
 
 }
